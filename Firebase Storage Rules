@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service firebase.storage {
+
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+
+      return request.auth != null
+        && request.auth.uid == "YOUR_ADMIN_UID";
+
+    }
+
+
+    match /songs/{fileName} {
+
+      allow read: if true;
+
+      allow write:
+        if isAdmin()
+        && request.resource.size < 100 * 1024 * 1024
+        && request.resource.contentType.matches("audio/.*");
+
+      allow delete:
+        if isAdmin();
+
+    }
+
+
+    match /covers/{fileName} {
+
+      allow read: if true;
+
+      allow write:
+        if isAdmin()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+
+      allow delete:
+        if isAdmin();
+
+    }
+
+  }
+
+}
