@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+
+  match /databases/{database}/documents {
+
+    /*
+      Public users can read songs and playlists.
+      Only authenticated users can write.
+
+      For stronger security, replace the admin UID below
+      with your actual Firebase Authentication UID.
+    */
+
+    function isAdmin() {
+
+      return request.auth != null
+        && request.auth.uid == "YOUR_ADMIN_UID";
+
+    }
+
+
+    match /songs/{songId} {
+
+      allow read: if true;
+
+      allow create, update, delete:
+        if isAdmin();
+
+    }
+
+
+    match /playlists/{playlistId} {
+
+      allow read: if true;
+
+      allow create, update, delete:
+        if isAdmin();
+
+    }
+
+  }
+}
