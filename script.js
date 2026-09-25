@@ -1,6 +1,4 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
 import {
   getAuth,
@@ -31,101 +29,52 @@ import {
   deleteObject
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
-import {
-  firebaseConfig
-} from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js";
 
 
-/* =====================================================
-   FIREBASE
-===================================================== */
+/* ================= FIREBASE ================= */
 
 const app = initializeApp(firebaseConfig);
-
 const auth = getAuth(app);
-
 const db = getFirestore(app);
-
 const storage = getStorage(app);
 
 
-/* =====================================================
-   STATE
-===================================================== */
+/* ================= STATE ================= */
 
 let songs = [];
-
 let playlists = [];
-
-let currentSongIndex = -1;
-
-let shuffleEnabled = false;
-
-let repeatMode = "off";
-
-let currentUser = null;
-
-
-/* =====================================================
-   LOCAL STORAGE
-===================================================== */
+let userPlaylists =
+  JSON.parse(localStorage.getItem("gaanxUserPlaylists") || "[]");
 
 let likedSongs =
-  JSON.parse(localStorage.getItem("gaanxLiked")) || [];
+  JSON.parse(localStorage.getItem("gaanxLiked") || "[]");
 
 let recentlyPlayed =
-  JSON.parse(localStorage.getItem("gaanxRecent")) || [];
+  JSON.parse(localStorage.getItem("gaanxRecent") || "[]");
+
+let currentSongIndex = -1;
+let currentUser = null;
+let shuffleEnabled = false;
+let repeatMode = "off";
+let selectedSongForPlaylist = null;
 
 
-/* =====================================================
-   DOM
-===================================================== */
+/* ================= DOM ================= */
 
 const audio = document.getElementById("audio");
-
-const homeSongs =
-  document.getElementById("homeSongs");
-
-const searchSongsContainer =
-  document.getElementById("searchSongs");
-
-const likedSongsContainer =
-  document.getElementById("likedSongs");
-
-const recentSongsContainer =
-  document.getElementById("recentSongs");
-
-const playlistGrid =
-  document.getElementById("playlistGrid");
-
-const searchInput =
-  document.getElementById("searchInput");
-
-
-/* =====================================================
-   DEFAULT COVER
-===================================================== */
 
 const DEFAULT_COVER =
   "data:image/svg+xml;charset=UTF-8," +
   encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg"
-         width="600"
-         height="600"
-         viewBox="0 0 600 600">
-      <rect width="600" height="600" fill="#181818"/>
-      <text x="300"
-            y="330"
-            text-anchor="middle"
-            font-size="180"
-            fill="#1ed760">G</text>
-    </svg>
-  `);
+  <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600">
+    <rect width="600" height="600" fill="#181818"/>
+    <text x="300" y="340" text-anchor="middle"
+    font-size="180" fill="#1ed760">G</text>
+  </svg>`);
 
 
-/* =====================================================
-   LOAD FIRESTORE DATA
-===================================================== */
+/* ================= FIRESTORE ================= */
 
 async function loadSongs() {
 
@@ -136,23 +85,22 @@ async function loadSongs() {
       orderBy("createdAt", "desc")
     );
 
-    const snapshot = await getDocs(q);
+    const snap = await getDocs(q);
 
-    songs = snapshot.docs.map(item => ({
-      id: item.id,
-      ...item.data()
+    songs = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
     }));
 
     renderAll();
+    renderAdminSongs();
 
-  } catch (error) {
+  } catch (e) {
 
-    console.error(error);
-
+    console.error(e);
     showToast("Could not load songs.");
 
   }
-
 }
 
 
@@ -160,43 +108,40 @@ async function loadPlaylists() {
 
   try {
 
-    const snapshot =
+    const snap =
       await getDocs(collection(db, "playlists"));
 
-    playlists = snapshot.docs.map(item => ({
-      id: item.id,
-      ...item.data()
+    playlists = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
     }));
 
     renderPlaylists();
-
     renderAdminPlaylistOptions();
+    renderAdminPlaylists();
 
-  } catch (error) {
+  } catch (e) {
 
-    console.error(error);
+    console.error(e);
 
   }
-
 }
 
 
-/* =====================================================
-   RENDER
-===================================================== */
+/* ================= RENDER SONGS ================= */
 
 function renderAll() {
 
-  renderSongs(songs, homeSongs);
-
+  renderSongs(songs, document.getElementById("homeSongs"));
   renderLiked();
-
   renderRecent();
 
 }
 
 
 function renderSongs(list, container) {
+
+  if (!container) return;
 
   if (!list.length) {
 
@@ -208,23 +153,17 @@ function renderSongs(list, container) {
     `;
 
     return;
-
   }
-
 
   container.innerHTML = list.map(song => {
 
-    const liked =
-      likedSongs.includes(song.id);
+    const liked = likedSongs.includes(song.id);
 
     return `
-
       <article class="song-card">
 
-        <button
-          class="like-button"
-          data-like="${song.id}"
-        >
+        <button class="like-button"
+          data-like="${song.id}">
           ${liked ? "♥" : "♡"}
         </button>
 
@@ -233,14 +172,12 @@ function renderSongs(list, container) {
           <img
             class="song-cover"
             src="${escapeHTML(song.coverURL || DEFAULT_COVER)}"
-            alt="${escapeHTML(song.title || "Song")}"
-            loading="lazy"
+            alt=""
           >
 
           <button
             class="card-play"
-            data-play="${song.id}"
-          >
+            data-play="${song.id}">
             ▶
           </button>
 
@@ -254,24 +191,24 @@ function renderSongs(list, container) {
           ${escapeHTML(song.artist || "Unknown Artist")}
         </div>
 
+        <button
+          class="add-playlist-button"
+          data-add-playlist="${song.id}">
+          + Playlist
+        </button>
+
       </article>
     `;
 
   }).join("");
-
 }
 
 
 function renderLiked() {
 
-  const list =
-    songs.filter(song =>
-      likedSongs.includes(song.id)
-    );
-
   renderSongs(
-    list,
-    likedSongsContainer
+    songs.filter(s => likedSongs.includes(s.id)),
+    document.getElementById("likedSongs")
   );
 
 }
@@ -279,30 +216,39 @@ function renderLiked() {
 
 function renderRecent() {
 
-  const list =
-    recentlyPlayed
-      .map(id =>
-        songs.find(song => song.id === id)
-      )
-      .filter(Boolean);
+  const list = recentlyPlayed
+    .map(id => songs.find(s => s.id === id))
+    .filter(Boolean);
 
   renderSongs(
     list,
-    recentSongsContainer
+    document.getElementById("recentSongs")
   );
 
 }
 
 
-/* =====================================================
-   PLAYLISTS
-===================================================== */
+/* ================= PLAYLISTS ================= */
 
 function renderPlaylists() {
 
-  if (!playlists.length) {
+  const all = [
+    ...playlists.map(p => ({
+      ...p,
+      official: true
+    })),
 
-    playlistGrid.innerHTML = `
+    ...userPlaylists.map(p => ({
+      ...p,
+      official: false
+    }))
+  ];
+
+  const box = document.getElementById("playlistGrid");
+
+  if (!all.length) {
+
+    box.innerHTML = `
       <div class="empty-state">
         <div>♫</div>
         <p>No playlists yet.</p>
@@ -310,205 +256,254 @@ function renderPlaylists() {
     `;
 
     return;
-
   }
 
+  box.innerHTML = all.map(p => `
 
-  playlistGrid.innerHTML =
-    playlists.map(playlist => `
+    <article
+      class="playlist-card"
+      data-playlist="${escapeHTML(p.id)}">
 
-      <article
-        class="playlist-card"
-        data-playlist="${playlist.id}"
-      >
+      <div class="playlist-icon">♫</div>
 
-        <div class="playlist-icon">
-          ♫
-        </div>
+      <h3>${escapeHTML(p.name)}</h3>
 
-        <h3>
-          ${escapeHTML(playlist.name)}
-        </h3>
+      <p>${(p.songIds || []).length} songs</p>
 
-        <p>
-          ${(playlist.songIds || []).length} songs
-        </p>
+      ${p.official
+        ? `<small class="official">OFFICIAL</small>`
+        : `<small class="personal">YOUR PLAYLIST</small>`
+      }
 
-      </article>
+    </article>
 
-    `).join("");
-
+  `).join("");
 }
 
 
-async function createPlaylist() {
+/* ================= USER PLAYLIST ================= */
 
-  if (!currentUser) {
+function createPlaylist() {
 
-    openModal("adminLoginModal");
+  const input =
+    document.getElementById("playlistNameInput");
 
-    showToast("Sign in required for this demo.");
-
-    return;
-
-  }
-
-  const name =
-    document
-      .getElementById("playlistNameInput")
-      .value
-      .trim();
+  const name = input.value.trim();
 
   if (!name) {
 
-    showToast("Enter a playlist name.");
+    showToast("Enter playlist name.");
 
     return;
-
   }
 
-  try {
+  userPlaylists.push({
 
-    await addDoc(
-      collection(db, "playlists"),
-      {
-        name,
-        songIds: [],
-        createdAt: serverTimestamp()
-      }
-    );
+    id: "local_" + Date.now(),
 
-    document
-      .getElementById("playlistNameInput")
-      .value = "";
+    name,
 
-    closeModal("playlistModal");
+    songIds: [],
 
-    await loadPlaylists();
+    createdAt: Date.now()
 
-    showToast("Playlist created.");
+  });
 
-  } catch (error) {
+  localStorage.setItem(
+    "gaanxUserPlaylists",
+    JSON.stringify(userPlaylists)
+  );
 
-    console.error(error);
+  input.value = "";
 
-    showToast("Could not create playlist.");
+  closeModal("playlistModal");
 
-  }
+  renderPlaylists();
 
+  showToast("Playlist created.");
 }
 
 
-/* =====================================================
-   PLAYLIST SONGS
-===================================================== */
+/* ================= OPEN PLAYLIST ================= */
 
-async function openPlaylist(playlistId) {
+function openPlaylist(id) {
 
-  const playlist =
-    playlists.find(item =>
-      item.id === playlistId
-    );
+  let playlist =
+    playlists.find(p => p.id === id);
+
+  if (!playlist) {
+
+    playlist =
+      userPlaylists.find(p => p.id === id);
+
+  }
 
   if (!playlist) return;
 
-  const playlistSongs =
+  const list =
     (playlist.songIds || [])
-      .map(id =>
-        songs.find(song =>
-          song.id === id
-        )
-      )
+      .map(id => songs.find(s => s.id === id))
       .filter(Boolean);
+
+  const box =
+    document.getElementById("playlistGrid");
 
   showPage("playlists");
 
-  playlistGrid.innerHTML = `
+  box.innerHTML = `
 
-    <div style="grid-column:1/-1">
+    <div class="playlist-open">
 
-      <button
-        class="secondary-button"
-        id="backToPlaylists"
-      >
+      <button class="secondary-button" id="backPlaylists">
         ← Back
       </button>
 
-      <br><br>
-
       <h2>${escapeHTML(playlist.name)}</h2>
 
-      <br>
+      <p>${list.length} songs</p>
 
-      <div
-        class="song-grid"
-        id="openedPlaylistSongs"
-      ></div>
+      <div class="song-grid" id="openedPlaylistSongs"></div>
 
     </div>
   `;
 
   renderSongs(
-    playlistSongs,
-    document.getElementById(
-      "openedPlaylistSongs"
-    )
+    list,
+    document.getElementById("openedPlaylistSongs")
   );
 
-  document
-    .getElementById("backToPlaylists")
+  document.getElementById("backPlaylists")
     .onclick = renderPlaylists;
-
 }
 
 
-/* =====================================================
-   PLAY MUSIC
-===================================================== */
+/* ================= ADD SONG ================= */
+
+function openAddPlaylist(songId) {
+
+  const song =
+    songs.find(s => s.id === songId);
+
+  if (!song) return;
+
+  selectedSongForPlaylist = songId;
+
+  document.getElementById("addPlaylistSongName")
+    .textContent =
+    `Add "${song.title}" to a playlist`;
+
+  const box =
+    document.getElementById("addPlaylistOptions");
+
+  if (!userPlaylists.length) {
+
+    box.innerHTML = `
+      <p class="modal-subtitle">
+        You don't have a personal playlist yet.
+      </p>
+
+      <button
+        class="primary-button full-button"
+        id="createFromAdd">
+        + Create Playlist
+      </button>
+    `;
+
+    openModal("addPlaylistModal");
+
+    document.getElementById("createFromAdd")
+      .onclick = () => {
+
+        closeModal("addPlaylistModal");
+
+        openModal("playlistModal");
+
+      };
+
+    return;
+  }
+
+  box.innerHTML =
+    userPlaylists.map(p => `
+
+      <button
+        class="playlist-select-button"
+        data-select-playlist="${p.id}">
+        ♫ ${escapeHTML(p.name)}
+      </button>
+
+    `).join("");
+
+  openModal("addPlaylistModal");
+}
+
+
+function addSongToPlaylist(playlistId) {
+
+  if (!selectedSongForPlaylist) return;
+
+  const playlist =
+    userPlaylists.find(p => p.id === playlistId);
+
+  if (!playlist) return;
+
+  if (!playlist.songIds.includes(selectedSongForPlaylist)) {
+
+    playlist.songIds.push(selectedSongForPlaylist);
+
+    localStorage.setItem(
+      "gaanxUserPlaylists",
+      JSON.stringify(userPlaylists)
+    );
+
+    showToast("Song added to playlist.");
+
+  } else {
+
+    showToast("Song already exists.");
+
+  }
+
+  closeModal("addPlaylistModal");
+
+  renderPlaylists();
+}
+
+
+/* ================= PLAYER ================= */
 
 function playSong(id) {
 
   const index =
-    songs.findIndex(song =>
-      song.id === id
-    );
+    songs.findIndex(s => s.id === id);
 
   if (index === -1) return;
 
   currentSongIndex = index;
 
-  const song =
-    songs[currentSongIndex];
+  const song = songs[index];
 
   audio.src = song.audioURL;
 
-  audio.play().catch(error =>
-    console.error(error)
-  );
+  audio.play()
+    .then(() => {
+      document.getElementById("playButton")
+        .textContent = "❚❚";
+    })
+    .catch(console.error);
 
-  document
-    .getElementById("playerCover")
-    .src =
-      song.coverURL || DEFAULT_COVER;
+  document.getElementById("playerCover")
+    .src = song.coverURL || DEFAULT_COVER;
 
-  document
-    .getElementById("playerTitle")
-    .textContent =
-      song.title || "Untitled";
+  document.getElementById("playerTitle")
+    .textContent = song.title || "Untitled";
 
-  document
-    .getElementById("playerArtist")
-    .textContent =
-      song.artist || "Unknown Artist";
+  document.getElementById("playerArtist")
+    .textContent = song.artist || "Unknown Artist";
 
-  document
-    .getElementById("playButton")
-    .textContent = "❚❚";
+  addRecent(id);
 
   updatePlayerLike();
-
-  addToRecentlyPlayed(id);
-
 }
 
 
@@ -516,31 +511,19 @@ function togglePlay() {
 
   if (!audio.src) {
 
-    if (songs.length) {
-
+    if (songs.length)
       playSong(songs[0].id);
 
-    }
-
     return;
-
   }
 
   if (audio.paused) {
 
     audio.play();
 
-    document
-      .getElementById("playButton")
-      .textContent = "❚❚";
-
   } else {
 
     audio.pause();
-
-    document
-      .getElementById("playButton")
-      .textContent = "▶";
 
   }
 
@@ -551,32 +534,22 @@ function nextSong() {
 
   if (!songs.length) return;
 
-  let nextIndex;
+  let i;
 
   if (shuffleEnabled) {
 
-    nextIndex =
-      Math.floor(
-        Math.random() * songs.length
-      );
+    i = Math.floor(Math.random() * songs.length);
 
   } else {
 
-    nextIndex =
-      currentSongIndex + 1;
+    i = currentSongIndex + 1;
 
-    if (nextIndex >= songs.length) {
-
-      nextIndex = 0;
-
-    }
+    if (i >= songs.length)
+      i = 0;
 
   }
 
-  playSong(
-    songs[nextIndex].id
-  );
-
+  playSong(songs[i].id);
 }
 
 
@@ -584,195 +557,91 @@ function previousSong() {
 
   if (!songs.length) return;
 
-  let index =
-    currentSongIndex - 1;
+  let i = currentSongIndex - 1;
 
-  if (index < 0) {
+  if (i < 0)
+    i = songs.length - 1;
 
-    index = songs.length - 1;
-
-  }
-
-  playSong(
-    songs[index].id
-  );
-
+  playSong(songs[i].id);
 }
 
 
-/* =====================================================
-   SHUFFLE / REPEAT
-===================================================== */
+/* ================= AUDIO ================= */
 
-function toggleShuffle() {
+audio.addEventListener("timeupdate", () => {
 
-  shuffleEnabled =
-    !shuffleEnabled;
+  if (!audio.duration) return;
 
-  document
-    .getElementById("shuffleButton")
-    .classList.toggle(
-      "active",
-      shuffleEnabled
-    );
+  document.getElementById("progressBar").value =
+    (audio.currentTime / audio.duration) * 100;
 
-  showToast(
-    shuffleEnabled
-      ? "Shuffle on"
-      : "Shuffle off"
-  );
+  document.getElementById("currentTime")
+    .textContent = formatTime(audio.currentTime);
 
-}
+  document.getElementById("duration")
+    .textContent = formatTime(audio.duration);
+
+});
 
 
-function toggleRepeat() {
+audio.addEventListener("play", () => {
 
-  if (repeatMode === "off") {
+  document.getElementById("playButton")
+    .textContent = "❚❚";
 
-    repeatMode = "one";
+});
 
-  } else if (repeatMode === "one") {
 
-    repeatMode = "all";
+audio.addEventListener("pause", () => {
+
+  document.getElementById("playButton")
+    .textContent = "▶";
+
+});
+
+
+audio.addEventListener("ended", () => {
+
+  if (repeatMode === "one") {
+
+    audio.currentTime = 0;
+    audio.play();
 
   } else {
-
-    repeatMode = "off";
-
-  }
-
-  const button =
-    document.getElementById(
-      "repeatButton"
-    );
-
-  button.classList.toggle(
-    "active",
-    repeatMode !== "off"
-  );
-
-  button.textContent =
-    repeatMode === "one"
-      ? "↻1"
-      : "↻";
-
-}
-
-
-/* =====================================================
-   AUDIO EVENTS
-===================================================== */
-
-audio.addEventListener(
-  "timeupdate",
-  () => {
-
-    if (!audio.duration) return;
-
-    const percentage =
-      audio.currentTime /
-      audio.duration *
-      100;
-
-    document
-      .getElementById("progressBar")
-      .value = percentage;
-
-    document
-      .getElementById("currentTime")
-      .textContent =
-        formatTime(audio.currentTime);
-
-    document
-      .getElementById("duration")
-      .textContent =
-        formatTime(audio.duration);
-
-  }
-);
-
-
-audio.addEventListener(
-  "ended",
-  () => {
-
-    if (repeatMode === "one") {
-
-      audio.currentTime = 0;
-
-      audio.play();
-
-      return;
-
-    }
 
     nextSong();
 
   }
-);
+
+});
 
 
-document
-  .getElementById("progressBar")
-  .addEventListener(
-    "input",
-    event => {
+document.getElementById("progressBar")
+  .addEventListener("input", e => {
 
-      if (!audio.duration) return;
-
+    if (audio.duration)
       audio.currentTime =
-        event.target.value /
-        100 *
-        audio.duration;
+        Number(e.target.value) / 100 * audio.duration;
 
-    }
-  );
+  });
 
 
-document
-  .getElementById("volumeBar")
-  .addEventListener(
-    "input",
-    event => {
+document.getElementById("volumeBar")
+  .addEventListener("input", e => {
 
-      audio.volume =
-        Number(event.target.value);
+    audio.volume = Number(e.target.value);
 
-    }
-  );
+  });
 
 
-function formatTime(seconds) {
-
-  if (!Number.isFinite(seconds)) {
-
-    return "0:00";
-
-  }
-
-  const minutes =
-    Math.floor(seconds / 60);
-
-  const secs =
-    Math.floor(seconds % 60);
-
-  return `${minutes}:${String(secs).padStart(2, "0")}`;
-
-}
-
-
-/* =====================================================
-   LIKE
-===================================================== */
+/* ================= LIKE ================= */
 
 function toggleLike(id) {
 
   if (likedSongs.includes(id)) {
 
     likedSongs =
-      likedSongs.filter(
-        item => item !== id
-      );
+      likedSongs.filter(x => x !== id);
 
   } else {
 
@@ -788,46 +657,29 @@ function toggleLike(id) {
   renderAll();
 
   updatePlayerLike();
-
 }
 
 
 function updatePlayerLike() {
 
-  const song =
-    songs[currentSongIndex];
+  const song = songs[currentSongIndex];
 
   const button =
-    document.getElementById(
-      "playerLike"
-    );
-
-  if (!song) {
-
-    button.textContent = "♡";
-
-    return;
-
-  }
+    document.getElementById("playerLike");
 
   button.textContent =
-    likedSongs.includes(song.id)
+    song && likedSongs.includes(song.id)
       ? "♥"
       : "♡";
-
 }
 
 
-/* =====================================================
-   RECENT
-===================================================== */
+/* ================= RECENT ================= */
 
-function addToRecentlyPlayed(id) {
+function addRecent(id) {
 
   recentlyPlayed =
-    recentlyPlayed.filter(
-      item => item !== id
-    );
+    recentlyPlayed.filter(x => x !== id);
 
   recentlyPlayed.unshift(id);
 
@@ -836,187 +688,102 @@ function addToRecentlyPlayed(id) {
 
   localStorage.setItem(
     "gaanxRecent",
-    JSON.stringify(
-      recentlyPlayed
-    )
+    JSON.stringify(recentlyPlayed)
   );
 
   renderRecent();
-
 }
 
 
-/* =====================================================
-   SEARCH
-===================================================== */
+/* ================= SEARCH ================= */
 
-function performSearch() {
+document.getElementById("searchInput")
+  .addEventListener("input", e => {
 
-  const query =
-    searchInput.value
-      .trim()
-      .toLowerCase();
+    const q =
+      e.target.value.trim().toLowerCase();
 
-  if (!query) {
-
-    searchSongsContainer.innerHTML = "";
-
-    return;
-
-  }
-
-  const results =
-    songs.filter(song => {
-
-      const title =
-        (song.title || "")
-          .toLowerCase();
-
-      const artist =
-        (song.artist || "")
-          .toLowerCase();
-
-      const album =
-        (song.album || "")
-          .toLowerCase();
-
-      return (
-        title.includes(query) ||
-        artist.includes(query) ||
-        album.includes(query)
+    const result =
+      songs.filter(s =>
+        `${s.title} ${s.artist} ${s.album}`
+          .toLowerCase()
+          .includes(q)
       );
 
-    });
+    renderSongs(
+      q ? result : [],
+      document.getElementById("searchSongs")
+    );
 
-  renderSongs(
-    results,
-    searchSongsContainer
-  );
-
-}
+  });
 
 
-/* =====================================================
-   ADMIN AUTH
-===================================================== */
+/* ================= ADMIN LOGIN ================= */
 
-document
-  .getElementById("adminButton")
-  .addEventListener(
-    "click",
-    () => {
+document.getElementById("adminButton")
+  .onclick = () => {
 
-      if (currentUser) {
+    if (currentUser)
+      openAdminPanel();
 
-        openAdminPanel();
+    else
+      openModal("adminLoginModal");
 
-      } else {
-
-        openModal(
-          "adminLoginModal"
-        );
-
-      }
-
-    }
-  );
+  };
 
 
-document
-  .getElementById("adminLoginButton")
-  .addEventListener(
-    "click",
-    async () => {
+document.getElementById("adminLoginButton")
+  .onclick = async () => {
 
-      const email =
-        document
-          .getElementById(
-            "adminEmail"
-          )
-          .value
-          .trim();
+    const email =
+      document.getElementById("adminEmail").value.trim();
 
-      const password =
-        document
-          .getElementById(
-            "adminPassword"
-          )
-          .value;
+    const password =
+      document.getElementById("adminPassword").value;
 
-      const errorBox =
-        document.getElementById(
-          "loginError"
-        );
+    const error =
+      document.getElementById("loginError");
 
-      errorBox.textContent = "";
+    error.textContent = "";
 
-      if (!email || !password) {
+    if (!email || !password) {
 
-        errorBox.textContent =
-          "Enter email and password.";
+      error.textContent =
+        "Enter email and password.";
 
-        return;
-
-      }
-
-      try {
-
-        await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
-      } catch (error) {
-
-        console.error(error);
-
-        errorBox.textContent =
-          "Invalid login details.";
-
-      }
-
-    }
-  );
-
-
-document
-  .getElementById(
-    "adminLogoutButton"
-  )
-  .addEventListener(
-    "click",
-    async () => {
-
-      await signOut(auth);
-
-      closeAdminPanel();
-
-      showToast("Logged out.");
-
-    }
-  );
-
-
-onAuthStateChanged(
-  auth,
-  user => {
-
-    currentUser = user;
-
-    if (user) {
-
-      closeModal("adminLoginModal");
-
+      return;
     }
 
-  }
-);
+    try {
+
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+    } catch (e) {
+
+      console.error(e);
+
+      error.textContent =
+        "Wrong email or password.";
+
+    }
+  };
 
 
-/* =====================================================
-   ADMIN PANEL
-===================================================== */
+onAuthStateChanged(auth, user => {
+
+  currentUser = user;
+
+  if (user)
+    closeModal("adminLoginModal");
+
+});
+
+
+/* ================= ADMIN PANEL ================= */
 
 function openAdminPanel() {
 
@@ -1025,103 +792,69 @@ function openAdminPanel() {
     openModal("adminLoginModal");
 
     return;
-
   }
 
-  document
-    .getElementById("adminPanel")
+  document.getElementById("adminPanel")
     .classList.add("show");
 
   renderAdminSongs();
-
   renderAdminPlaylists();
-
   renderAdminPlaylistOptions();
-
 }
 
 
 function closeAdminPanel() {
 
-  document
-    .getElementById("adminPanel")
+  document.getElementById("adminPanel")
     .classList.remove("show");
 
 }
 
 
-document
-  .getElementById(
-    "closeAdminButton"
-  )
-  .addEventListener(
-    "click",
-    closeAdminPanel
-  );
+document.getElementById("closeAdminButton")
+  .onclick = closeAdminPanel;
 
 
-/* =====================================================
-   ADMIN TABS
-===================================================== */
+document.getElementById("adminLogoutButton")
+  .onclick = async () => {
 
-document
-  .querySelectorAll(".admin-tab")
+    await signOut(auth);
+
+    closeAdminPanel();
+
+    showToast("Logged out.");
+
+  };
+
+
+/* ================= ADMIN TABS ================= */
+
+document.querySelectorAll(".admin-tab")
   .forEach(button => {
 
-    button.addEventListener(
-      "click",
-      () => {
+    button.onclick = () => {
 
-        document
-          .querySelectorAll(
-            ".admin-tab"
-          )
-          .forEach(item =>
-            item.classList.remove(
-              "active"
-            )
-          );
+      document.querySelectorAll(".admin-tab")
+        .forEach(x => x.classList.remove("active"));
 
-        document
-          .querySelectorAll(
-            ".admin-page"
-          )
-          .forEach(item =>
-            item.classList.remove(
-              "active"
-            )
-          );
+      document.querySelectorAll(".admin-page")
+        .forEach(x => x.classList.remove("active"));
 
-        button.classList.add(
-          "active"
-        );
+      button.classList.add("active");
 
-        document
-          .getElementById(
-            `admin-${button.dataset.adminTab}`
-          )
-          .classList.add(
-            "active"
-          );
+      document.getElementById(
+        `admin-${button.dataset.adminTab}`
+      ).classList.add("active");
 
-      }
-    );
+    };
 
   });
 
 
-/* =====================================================
-   UPLOAD SONG
-===================================================== */
+/* ================= ADMIN UPLOAD ================= */
 
-document
-  .getElementById(
-    "uploadSongButton"
-  )
-  .addEventListener(
-    "click",
-    uploadSong
-  );
+document.getElementById("uploadSongButton")
+  .onclick = uploadSong;
 
 
 async function uploadSong() {
@@ -1131,108 +864,56 @@ async function uploadSong() {
     showToast("Admin login required.");
 
     return;
-
   }
 
   const title =
-    document
-      .getElementById(
-        "songTitleInput"
-      )
-      .value
-      .trim();
+    document.getElementById("songTitleInput").value.trim();
 
   const artist =
-    document
-      .getElementById(
-        "songArtistInput"
-      )
-      .value
-      .trim();
+    document.getElementById("songArtistInput").value.trim();
 
   const album =
-    document
-      .getElementById(
-        "songAlbumInput"
-      )
-      .value
-      .trim();
+    document.getElementById("songAlbumInput").value.trim();
 
   const playlistId =
-    document
-      .getElementById(
-        "songPlaylistInput"
-      )
-      .value;
+    document.getElementById("songPlaylistInput").value;
 
   const audioFile =
-    document
-      .getElementById(
-        "audioFileInput"
-      )
-      .files[0];
+    document.getElementById("audioFileInput").files[0];
 
   const coverFile =
-    document
-      .getElementById(
-        "coverFileInput"
-      )
-      .files[0];
-
-  const status =
-    document.getElementById(
-      "uploadStatus"
-    );
+    document.getElementById("coverFileInput").files[0];
 
   const progress =
-    document.getElementById(
-      "uploadProgressBar"
-    );
+    document.getElementById("uploadProgressBar");
 
+  const status =
+    document.getElementById("uploadStatus");
 
   if (!title || !artist || !audioFile) {
 
-    showToast(
-      "Title, artist and audio are required."
-    );
+    showToast("Title, artist and MP3 required.");
 
     return;
-
   }
-
 
   try {
 
-    status.textContent =
-      "Uploading audio...";
-
-
-    /* AUDIO */
+    status.textContent = "Uploading MP3...";
 
     const audioPath =
       `songs/${Date.now()}_${safeFileName(audioFile.name)}`;
 
-    const audioRef =
-      ref(storage, audioPath);
-
-    const audioUpload =
+    const audioTask =
       uploadBytesResumable(
-        audioRef,
+        ref(storage, audioPath),
         audioFile
       );
 
-
     const audioURL =
-      await uploadWithProgress(
-        audioUpload,
-        progress
-      );
-
-
-    /* COVER */
+      await uploadFile(audioTask, progress);
 
     let coverURL = "";
-
     let coverPath = "";
 
     if (coverFile) {
@@ -1243,29 +924,18 @@ async function uploadSong() {
       coverPath =
         `covers/${Date.now()}_${safeFileName(coverFile.name)}`;
 
-      const coverRef =
-        ref(storage, coverPath);
-
-      const coverUpload =
+      const coverTask =
         uploadBytesResumable(
-          coverRef,
+          ref(storage, coverPath),
           coverFile
         );
 
       coverURL =
-        await uploadWithProgress(
-          coverUpload,
-          progress
-        );
-
+        await uploadFile(coverTask, progress);
     }
 
-
-    /* DATABASE */
-
     status.textContent =
-      "Publishing song...";
-
+      "Publishing...";
 
     const songDoc =
       await addDoc(
@@ -1284,730 +954,546 @@ async function uploadSong() {
         }
       );
 
-
-    /* ADD TO PLAYLIST */
-
     if (playlistId) {
 
-      const playlistRef =
-        doc(
-          db,
-          "playlists",
-          playlistId
-        );
+      const pRef =
+        doc(db, "playlists", playlistId);
 
-      const playlistSnap =
-        await getDoc(playlistRef);
+      const pSnap =
+        await getDoc(pRef);
 
-      if (playlistSnap.exists()) {
+      if (pSnap.exists()) {
 
-        const playlistData =
-          playlistSnap.data();
+        const ids =
+          pSnap.data().songIds || [];
 
-        const songIds =
-          playlistData.songIds || [];
-
-        songIds.push(songDoc.id);
+        ids.push(songDoc.id);
 
         await updateDoc(
-          playlistRef,
-          {
-            songIds
-          }
+          pRef,
+          { songIds: ids }
         );
 
       }
-
     }
-
-
-    status.textContent =
-      "Song published successfully.";
 
     progress.style.width = "100%";
 
+    status.textContent =
+      "Song published successfully!";
 
     clearUploadForm();
 
     await loadSongs();
-
     await loadPlaylists();
 
-    renderAdminSongs();
+    showToast("🎵 Song published!");
 
-    showToast(
-      "Song published successfully."
-    );
+  } catch (e) {
 
-
-  } catch (error) {
-
-    console.error(error);
+    console.error(e);
 
     status.textContent =
       "Upload failed.";
 
     showToast(
-      "Upload failed. Check Firebase settings."
+      "Upload failed. Check Firebase Rules."
     );
 
   }
-
 }
 
 
-function uploadWithProgress(
-  uploadTask,
-  progressBar
-) {
+function uploadFile(task, bar) {
 
-  return new Promise(
-    (resolve, reject) => {
+  return new Promise((resolve, reject) => {
 
-      uploadTask.on(
-        "state_changed",
+    task.on(
+      "state_changed",
 
-        snapshot => {
+      snap => {
 
-          const percentage =
-            snapshot.bytesTransferred /
-            snapshot.totalBytes *
-            100;
+        const percent =
+          snap.bytesTransferred /
+          snap.totalBytes * 100;
 
-          progressBar.style.width =
-            `${percentage}%`;
+        bar.style.width = percent + "%";
 
-        },
+      },
 
-        reject,
+      reject,
 
-        async () => {
+      async () => {
 
-          const url =
-            await getDownloadURL(
-              uploadTask.snapshot.ref
-            );
+        resolve(
+          await getDownloadURL(task.snapshot.ref)
+        );
 
-          resolve(url);
+      }
+    );
 
-        }
-      );
-
-    }
-  );
-
+  });
 }
 
 
-/* =====================================================
-   ADMIN SONG LIST
-===================================================== */
+/* ================= ADMIN SONGS ================= */
 
 function renderAdminSongs() {
 
-  const container =
-    document.getElementById(
-      "adminSongList"
-    );
+  const box =
+    document.getElementById("adminSongList");
 
   if (!songs.length) {
 
-    container.innerHTML =
-      "<p>No songs yet.</p>";
+    box.innerHTML = "<p>No songs yet.</p>";
 
     return;
-
   }
 
-
-  container.innerHTML =
-    songs.map(song => `
+  box.innerHTML =
+    songs.map(s => `
 
       <div class="admin-song-row">
 
-        <img
-          src="${escapeHTML(song.coverURL || DEFAULT_COVER)}"
-          alt=""
-        >
+        <img src="${escapeHTML(s.coverURL || DEFAULT_COVER)}">
 
         <div>
-
-          <strong>
-            ${escapeHTML(song.title)}
-          </strong>
-
-          <small>
-            ${escapeHTML(song.artist)}
-          </small>
-
+          <strong>${escapeHTML(s.title)}</strong>
+          <small>${escapeHTML(s.artist)}</small>
         </div>
 
         <button
           class="delete-button"
-          data-delete-song="${song.id}"
-        >
+          data-delete-song="${s.id}">
           Delete
         </button>
 
       </div>
 
     `).join("");
-
 }
 
-
-/* =====================================================
-   DELETE SONG
-===================================================== */
 
 async function deleteSong(id) {
 
   if (!currentUser) return;
 
   const song =
-    songs.find(item =>
-      item.id === id
-    );
+    songs.find(s => s.id === id);
 
   if (!song) return;
 
-  const confirmed =
-    confirm(
-      `Delete "${song.title}"?`
-    );
-
-  if (!confirmed) return;
-
+  if (!confirm(`Delete "${song.title}"?`))
+    return;
 
   try {
 
     if (song.audioPath) {
 
       try {
-
         await deleteObject(
-          ref(
-            storage,
-            song.audioPath
-          )
+          ref(storage, song.audioPath)
         );
-
-      } catch (error) {
-
-        console.warn(
-          "Audio file delete failed.",
-          error
-        );
-
-      }
+      } catch {}
 
     }
-
 
     if (song.coverPath) {
 
       try {
-
         await deleteObject(
-          ref(
-            storage,
-            song.coverPath
-          )
+          ref(storage, song.coverPath)
         );
-
-      } catch (error) {
-
-        console.warn(
-          "Cover delete failed.",
-          error
-        );
-
-      }
+      } catch {}
 
     }
 
-
     await deleteDoc(
-      doc(
-        db,
-        "songs",
-        id
-      )
+      doc(db, "songs", id)
     );
-
-
-    /* Remove from playlists */
 
     for (const playlist of playlists) {
 
-      if (
-        (playlist.songIds || [])
-          .includes(id)
-      ) {
-
-        const updated =
-          playlist.songIds.filter(
-            songId =>
-              songId !== id
-          );
+      if ((playlist.songIds || []).includes(id)) {
 
         await updateDoc(
-          doc(
-            db,
-            "playlists",
-            playlist.id
-          ),
+          doc(db, "playlists", playlist.id),
           {
-            songIds: updated
+            songIds:
+              playlist.songIds.filter(x => x !== id)
           }
         );
 
       }
-
     }
 
-
     await loadSongs();
-
     await loadPlaylists();
 
-    renderAdminSongs();
+    showToast("Song deleted.");
 
-    showToast(
-      "Song deleted."
-    );
+  } catch (e) {
 
+    console.error(e);
 
-  } catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Could not delete song."
-    );
+    showToast("Could not delete song.");
 
   }
-
 }
 
 
-/* =====================================================
-   ADMIN PLAYLIST
-===================================================== */
+/* ================= ADMIN PLAYLISTS ================= */
+
+function renderAdminPlaylistOptions() {
+
+  const select =
+    document.getElementById("songPlaylistInput");
+
+  select.innerHTML =
+    `<option value="">No playlist</option>` +
+    playlists.map(p => `
+      <option value="${p.id}">
+        ${escapeHTML(p.name)}
+      </option>
+    `).join("");
+}
+
 
 function renderAdminPlaylists() {
 
-  const container =
-    document.getElementById(
-      "adminPlaylistList"
-    );
+  const box =
+    document.getElementById("adminPlaylistList");
 
-  container.innerHTML =
-    playlists.map(playlist => `
+  if (!playlists.length) {
+
+    box.innerHTML =
+      "<p>No official playlists.</p>";
+
+    return;
+  }
+
+  box.innerHTML =
+    playlists.map(p => `
 
       <div class="admin-playlist-row">
 
         <div>
-
-          <strong>
-            ${escapeHTML(playlist.name)}
-          </strong>
-
-          <small>
-            ${(playlist.songIds || []).length} songs
-          </small>
-
+          <strong>${escapeHTML(p.name)}</strong>
+          <small>${(p.songIds || []).length} songs</small>
         </div>
 
         <button
           class="delete-button"
-          data-delete-playlist="${playlist.id}"
-        >
+          data-delete-playlist="${p.id}">
           Delete
         </button>
 
       </div>
 
     `).join("");
-
 }
 
 
-function renderAdminPlaylistOptions() {
+document.getElementById("adminCreatePlaylist")
+  .onclick = async () => {
 
-  const select =
-    document.getElementById(
-      "songPlaylistInput"
-    );
+    if (!currentUser) return;
 
-  select.innerHTML =
-    `<option value="">No playlist</option>` +
-    playlists.map(playlist => `
-      <option value="${playlist.id}">
-        ${escapeHTML(playlist.name)}
-      </option>
-    `).join("");
+    const input =
+      document.getElementById("adminPlaylistName");
 
-}
+    const name = input.value.trim();
 
+    if (!name) {
 
-/* =====================================================
-   DELETE PLAYLIST
-===================================================== */
+      showToast("Enter playlist name.");
+
+      return;
+    }
+
+    try {
+
+      await addDoc(
+        collection(db, "playlists"),
+        {
+          name,
+          songIds: [],
+          createdAt: serverTimestamp()
+        }
+      );
+
+      input.value = "";
+
+      await loadPlaylists();
+
+      showToast("Official playlist created.");
+
+    } catch (e) {
+
+      console.error(e);
+
+      showToast("Could not create playlist.");
+
+    }
+  };
+
 
 async function deletePlaylist(id) {
 
-  const playlist =
-    playlists.find(item =>
-      item.id === id
-    );
+  if (!currentUser) return;
 
-  if (!playlist) return;
+  const p =
+    playlists.find(x => x.id === id);
 
-  if (
-    !confirm(
-      `Delete playlist "${playlist.name}"?`
-    )
-  ) return;
+  if (!p) return;
 
+  if (!confirm(`Delete "${p.name}"?`))
+    return;
 
   try {
 
     await deleteDoc(
-      doc(
-        db,
-        "playlists",
-        id
-      )
+      doc(db, "playlists", id)
     );
 
     await loadPlaylists();
 
-    renderAdminPlaylists();
+    showToast("Playlist deleted.");
 
-    showToast(
-      "Playlist deleted."
-    );
+  } catch (e) {
 
-  } catch (error) {
+    console.error(e);
 
-    console.error(error);
-
-    showToast(
-      "Could not delete playlist."
-    );
+    showToast("Could not delete playlist.");
 
   }
-
 }
 
 
-/* =====================================================
-   EVENT DELEGATION
-===================================================== */
+/* ================= CLICK EVENTS ================= */
 
-document.addEventListener(
-  "click",
-  event => {
+document.addEventListener("click", e => {
 
-    const playButton =
-      event.target.closest(
-        "[data-play]"
-      );
+  const play =
+    e.target.closest("[data-play]");
 
-    if (playButton) {
+  if (play) {
 
-      playSong(
-        playButton.dataset.play
-      );
+    playSong(play.dataset.play);
 
-      return;
-
-    }
+    return;
+  }
 
 
-    const likeButton =
-      event.target.closest(
-        "[data-like]"
-      );
+  const like =
+    e.target.closest("[data-like]");
 
-    if (likeButton) {
+  if (like) {
 
-      toggleLike(
-        likeButton.dataset.like
-      );
+    toggleLike(like.dataset.like);
 
-      return;
-
-    }
+    return;
+  }
 
 
-    const playlist =
-      event.target.closest(
-        "[data-playlist]"
-      );
+  const add =
+    e.target.closest("[data-add-playlist]");
 
-    if (
-      playlist &&
-      !playlist.dataset.playing
-    ) {
+  if (add) {
 
-      openPlaylist(
-        playlist.dataset.playlist
-      );
+    openAddPlaylist(
+      add.dataset.addPlaylist
+    );
 
-      return;
-
-    }
+    return;
+  }
 
 
-    const deleteSongButton =
-      event.target.closest(
-        "[data-delete-song]"
-      );
+  const select =
+    e.target.closest("[data-select-playlist]");
 
-    if (deleteSongButton) {
+  if (select) {
 
-      deleteSong(
-        deleteSongButton.dataset.deleteSong
-      );
+    addSongToPlaylist(
+      select.dataset.selectPlaylist
+    );
 
-      return;
-
-    }
+    return;
+  }
 
 
-    const deletePlaylistButton =
-      event.target.closest(
-        "[data-delete-playlist]"
-      );
+  const playlist =
+    e.target.closest("[data-playlist]");
 
-    if (deletePlaylistButton) {
+  if (playlist) {
 
-      deletePlaylist(
-        deletePlaylistButton.dataset.deletePlaylist
-      );
+    openPlaylist(
+      playlist.dataset.playlist
+    );
 
-    }
+    return;
+  }
+
+
+  const delSong =
+    e.target.closest("[data-delete-song]");
+
+  if (delSong) {
+
+    deleteSong(
+      delSong.dataset.deleteSong
+    );
+
+    return;
+  }
+
+
+  const delPlaylist =
+    e.target.closest("[data-delete-playlist]");
+
+  if (delPlaylist) {
+
+    deletePlaylist(
+      delPlaylist.dataset.deletePlaylist
+    );
 
   }
-);
+
+});
 
 
-/* =====================================================
-   NAVIGATION
-===================================================== */
+/* ================= NAVIGATION ================= */
 
-document
-  .querySelectorAll(".nav-item[data-page]")
+document.querySelectorAll("[data-page]")
   .forEach(button => {
 
-    button.addEventListener(
-      "click",
-      () => {
-
-        showPage(
-          button.dataset.page
-        );
-
-      }
-    );
+    button.onclick = () =>
+      showPage(button.dataset.page);
 
   });
 
 
 function showPage(page) {
 
-  document
-    .querySelectorAll(".page")
-    .forEach(item =>
-      item.classList.remove(
-        "active"
-      )
+  document.querySelectorAll(".page")
+    .forEach(p =>
+      p.classList.remove("active")
     );
 
   const target =
-    document.getElementById(
-      `page-${page}`
-    );
+    document.getElementById(`page-${page}`);
 
-  if (target) {
+  if (target)
+    target.classList.add("active");
 
-    target.classList.add(
-      "active"
-    );
-
-  }
-
-
-  document
-    .querySelectorAll(
-      ".nav-item[data-page]"
-    )
-    .forEach(item => {
-
-      item.classList.toggle(
+  document.querySelectorAll("[data-page]")
+    .forEach(x =>
+      x.classList.toggle(
         "active",
-        item.dataset.page === page
-      );
-
-    });
+        x.dataset.page === page
+      )
+    );
 
 }
 
 
-/* =====================================================
-   UI BUTTONS
-===================================================== */
+/* ================= PLAYER BUTTONS ================= */
 
-document
-  .getElementById("playButton")
-  .addEventListener(
-    "click",
-    togglePlay
-  );
+document.getElementById("playButton")
+  .onclick = togglePlay;
 
-document
-  .getElementById("nextButton")
-  .addEventListener(
-    "click",
-    nextSong
-  );
+document.getElementById("nextButton")
+  .onclick = nextSong;
 
-document
-  .getElementById("previousButton")
-  .addEventListener(
-    "click",
-    previousSong
-  );
-
-document
-  .getElementById("shuffleButton")
-  .addEventListener(
-    "click",
-    toggleShuffle
-  );
-
-document
-  .getElementById("repeatButton")
-  .addEventListener(
-    "click",
-    toggleRepeat
-  );
-
-document
-  .getElementById("playerLike")
-  .addEventListener(
-    "click",
-    () => {
-
-      const song =
-        songs[currentSongIndex];
-
-      if (song) {
-
-        toggleLike(song.id);
-
-      }
-
-    }
-  );
+document.getElementById("previousButton")
+  .onclick = previousSong;
 
 
-document
-  .getElementById(
-    "heroPlayButton"
-  )
-  .addEventListener(
-    "click",
-    () => {
+document.getElementById("shuffleButton")
+  .onclick = () => {
 
-      if (songs.length) {
+    shuffleEnabled = !shuffleEnabled;
 
-        playSong(
-          songs[0].id
-        );
+    document.getElementById("shuffleButton")
+      .classList.toggle("active", shuffleEnabled);
 
-      }
-
-    }
-  );
+  };
 
 
-document
-  .getElementById(
-    "createPlaylistButton"
-  )
-  .addEventListener(
-    "click",
-    () =>
-      openModal(
-        "playlistModal"
-      )
-  );
+document.getElementById("repeatButton")
+  .onclick = () => {
+
+    if (repeatMode === "off")
+      repeatMode = "one";
+
+    else if (repeatMode === "one")
+      repeatMode = "all";
+
+    else
+      repeatMode = "off";
+
+    document.getElementById("repeatButton")
+      .classList.toggle(
+        "active",
+        repeatMode !== "off"
+      );
+
+  };
 
 
-document
-  .getElementById(
-    "savePlaylistButton"
-  )
-  .addEventListener(
-    "click",
-    createPlaylist
-  );
+document.getElementById("playerLike")
+  .onclick = () => {
+
+    const song = songs[currentSongIndex];
+
+    if (song)
+      toggleLike(song.id);
+
+  };
 
 
-document
-  .querySelectorAll(
-    "[data-close]"
-  )
+document.getElementById("heroPlayButton")
+  .onclick = () => {
+
+    if (songs.length)
+      playSong(songs[0].id);
+
+  };
+
+
+document.getElementById("createPlaylistButton")
+  .onclick = () =>
+    openModal("playlistModal");
+
+
+document.getElementById("savePlaylistButton")
+  .onclick = createPlaylist;
+
+
+document.querySelectorAll("[data-close]")
   .forEach(button => {
 
-    button.addEventListener(
-      "click",
-      () =>
-        closeModal(
-          button.dataset.close
-        )
-    );
+    button.onclick = () =>
+      closeModal(button.dataset.close);
 
   });
 
 
-searchInput.addEventListener(
-  "input",
-  performSearch
-);
+document.getElementById("mobileSearchButton")
+  .onclick = () => {
+
+    showPage("search");
+
+    document.getElementById("searchInput").focus();
+
+  };
 
 
-/* =====================================================
-   MOBILE SEARCH
-===================================================== */
-
-document
-  .getElementById(
-    "mobileSearchButton"
-  )
-  .addEventListener(
-    "click",
-    () => {
-
-      showPage("search");
-
-      searchInput.focus();
-
-    }
-  );
-
-
-/* =====================================================
-   MODALS
-===================================================== */
+/* ================= HELPERS ================= */
 
 function openModal(id) {
 
-  document
-    .getElementById(id)
+  document.getElementById(id)
     .classList.add("show");
 
 }
@@ -2015,57 +1501,42 @@ function openModal(id) {
 
 function closeModal(id) {
 
-  document
-    .getElementById(id)
+  document.getElementById(id)
     .classList.remove("show");
 
 }
 
 
-/* =====================================================
-   HELPERS
-===================================================== */
+function formatTime(sec) {
 
-function clearUploadForm() {
+  if (!Number.isFinite(sec))
+    return "0:00";
 
-  document.getElementById(
-    "songTitleInput"
-  ).value = "";
+  const min = Math.floor(sec / 60);
 
-  document.getElementById(
-    "songArtistInput"
-  ).value = "";
+  const s =
+    Math.floor(sec % 60)
+      .toString()
+      .padStart(2, "0");
 
-  document.getElementById(
-    "songAlbumInput"
-  ).value = "";
-
-  document.getElementById(
-    "audioFileInput"
-  ).value = "";
-
-  document.getElementById(
-    "coverFileInput"
-  ).value = "";
-
-  document.getElementById(
-    "uploadProgressBar"
-  ).style.width = "0%";
+  return `${min}:${s}`;
 
 }
 
 
 function safeFileName(name) {
 
-  return name
-    .replace(/[^a-zA-Z0-9._-]/g, "_");
+  return name.replace(
+    /[^a-zA-Z0-9._-]/g,
+    "_"
+  );
 
 }
 
 
 function escapeHTML(value) {
 
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -2078,31 +1549,35 @@ function escapeHTML(value) {
 function showToast(message) {
 
   const toast =
-    document.getElementById(
-      "toast"
-    );
+    document.getElementById("toast");
 
   toast.textContent = message;
 
   toast.classList.add("show");
 
   setTimeout(
-    () =>
-      toast.classList.remove(
-        "show"
-      ),
+    () => toast.classList.remove("show"),
     2500
   );
 
 }
 
 
-/* =====================================================
-   INITIALIZE
-===================================================== */
+function clearUploadForm() {
+
+  document.getElementById("songTitleInput").value = "";
+  document.getElementById("songArtistInput").value = "";
+  document.getElementById("songAlbumInput").value = "";
+  document.getElementById("audioFileInput").value = "";
+  document.getElementById("coverFileInput").value = "";
+  document.getElementById("uploadProgressBar").style.width = "0%";
+
+}
+
+
+/* ================= START ================= */
 
 audio.volume = 1;
 
 loadSongs();
-
 loadPlaylists();
