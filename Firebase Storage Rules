@@ -7,7 +7,7 @@ service firebase.storage {
     function isAdmin() {
 
       return request.auth != null
-        && request.auth.uid == "RfTwIpdMBsaEfMRRBLtkEscYqte2";
+        && request.auth.uid == "RuZHxqbezigQV6Y19H710WVHfLmj2";
 
     }
 
