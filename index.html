@@ -1,506 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>GAANX — Your Music. Your Vibe.</title>
-  <meta name="description" content="GAANX music streaming platform">
-
-  <link rel="stylesheet" href="style.css">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  >
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GAANX — Your Music. Your Vibe.</title>
+<meta name="description" content="GAANX music streaming platform">
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
 
-  <!-- ================= APP ================= -->
+<audio id="audio" preload="metadata"></audio>
 
-  <div class="app">
+<div class="app">
 
-    <!-- SIDEBAR -->
-
-    <aside class="sidebar">
-
-      <div class="brand">
-        <div class="brand-icon">G</div>
-        <span>GAAN<span class="brand-x">X</span></span>
-      </div>
-
-      <nav class="navigation">
-
-        <button class="nav-item active" data-page="home">
-          <span>⌂</span>
-          <span>Home</span>
-        </button>
-
-        <button class="nav-item" data-page="search">
-          <span>⌕</span>
-          <span>Search</span>
-        </button>
-
-        <button class="nav-item" data-page="playlists">
-          <span>♫</span>
-          <span>Playlists</span>
-        </button>
-
-        <button class="nav-item" data-page="liked">
-          <span>♥</span>
-          <span>Liked Songs</span>
-        </button>
-
-        <button class="nav-item" data-page="recent">
-          <span>◷</span>
-          <span>Recently Played</span>
-        </button>
-
-      </nav>
-
-      <div class="sidebar-bottom">
-
-        <button class="nav-item" id="adminButton">
-          <span>⚙</span>
-          <span>Admin</span>
-        </button>
-
-      </div>
-
-    </aside>
-
-
-    <!-- MAIN -->
-
-    <main class="main">
-
-      <!-- MOBILE HEADER -->
-
-      <header class="mobile-header">
-
-        <div class="mobile-brand">
-          GAAN<span>X</span>
-        </div>
-
-        <button id="mobileSearchButton">⌕</button>
-
-      </header>
-
-
-      <!-- HOME -->
-
-      <section class="page active" id="page-home">
-
-        <div class="hero">
-
-          <div>
-
-            <p class="eyebrow">GAANX MUSIC</p>
-
-            <h1>Your music.<br>your vibe.</h1>
-
-            <p class="hero-description">
-              Discover songs, create playlists and enjoy your favorite music.
-            </p>
-
-            <button class="primary-button" id="heroPlayButton">
-              ▶ Start Listening
-            </button>
-
-          </div>
-
-          <div class="hero-art">
-            <div class="hero-disc">♫</div>
-          </div>
-
-        </div>
-
-
-        <div class="section-header">
-
-          <div>
-            <h2>All Songs</h2>
-            <p>Latest music on GAANX</p>
-          </div>
-
-        </div>
-
-        <div class="song-grid" id="homeSongs"></div>
-
-      </section>
-
-
-      <!-- SEARCH -->
-
-      <section class="page" id="page-search">
-
-        <div class="page-title">
-          <h1>Search</h1>
-          <p>Find your favorite songs and artists.</p>
-        </div>
-
-        <div class="search-box">
-
-          <span>⌕</span>
-
-          <input
-            id="searchInput"
-            type="search"
-            placeholder="Search songs or artists..."
-            autocomplete="off"
-          >
-
-        </div>
-
-        <div class="song-grid" id="searchSongs"></div>
-
-      </section>
-
-
-      <!-- PLAYLISTS -->
-
-      <section class="page" id="page-playlists">
-
-        <div class="page-title playlist-title">
-
-          <div>
-            <h1>Your Playlists</h1>
-            <p>Create and manage your playlists.</p>
-          </div>
-
-          <button class="primary-button" id="createPlaylistButton">
-            + New Playlist
-          </button>
-
-        </div>
-
-        <div class="playlist-grid" id="playlistGrid"></div>
-
-      </section>
-
-
-      <!-- LIKED -->
-
-      <section class="page" id="page-liked">
-
-        <div class="page-title">
-          <h1>Liked Songs ♥</h1>
-          <p>Your favorite music.</p>
-        </div>
-
-        <div class="song-grid" id="likedSongs"></div>
-
-      </section>
-
-
-      <!-- RECENT -->
-
-      <section class="page" id="page-recent">
-
-        <div class="page-title">
-          <h1>Recently Played</h1>
-          <p>Your listening history.</p>
-        </div>
-
-        <div class="song-grid" id="recentSongs"></div>
-
-      </section>
-
-    </main>
-
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">G</div>
+    <span>GAAN<span class="brand-x">X</span></span>
   </div>
 
+  <nav class="navigation">
+    <button class="nav-item active" data-page="home">⌂ <span>Home</span></button>
+    <button class="nav-item" data-page="search">⌕ <span>Search</span></button>
+    <button class="nav-item" data-page="playlists">♫ <span>Playlists</span></button>
+    <button class="nav-item" data-page="liked">♥ <span>Liked Songs</span></button>
+    <button class="nav-item" data-page="recent">◷ <span>Recently Played</span></button>
+  </nav>
 
-  <!-- ================= PLAYER ================= -->
+  <div class="sidebar-bottom">
+    <button class="nav-item" id="adminButton">⚙ <span>Admin</span></button>
+  </div>
+</aside>
 
-  <footer class="player">
+<main class="main">
 
-    <div class="player-song">
+<header class="mobile-header">
+  <div class="mobile-brand">GAAN<span>X</span></div>
+  <button id="mobileSearchButton">⌕</button>
+</header>
 
-      <img id="playerCover" src="" alt="">
+<section class="page active" id="page-home">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">GAANX MUSIC</p>
+      <h1>Your music.<br>Your vibe.</h1>
+      <p class="hero-description">Discover songs, create playlists and enjoy your favorite music.</p>
+      <button class="primary-button" id="heroPlayButton">▶ Start Listening</button>
+    </div>
+    <div class="hero-art"><div class="hero-disc">♫</div></div>
+  </div>
 
-      <div class="player-info">
+  <div class="section-header">
+    <h2>All Songs</h2>
+    <p>Latest music on GAANX</p>
+  </div>
 
-        <strong id="playerTitle">GAANX</strong>
-        <span id="playerArtist">Select a song</span>
+  <div class="song-grid" id="homeSongs"></div>
+</section>
 
-      </div>
+<section class="page" id="page-search">
+  <div class="page-title">
+    <h1>Search</h1>
+    <p>Find your favorite songs and artists.</p>
+  </div>
 
-      <button id="playerLike" class="player-like">
-        ♡
-      </button>
+  <div class="search-box">
+    <span>⌕</span>
+    <input id="searchInput" type="search" placeholder="Search songs or artists...">
+  </div>
 
+  <div class="song-grid" id="searchSongs"></div>
+</section>
+
+<section class="page" id="page-playlists">
+  <div class="page-title playlist-title">
+    <div>
+      <h1>Your Playlists</h1>
+      <p>Your personal playlists — no login required.</p>
+    </div>
+    <button class="primary-button" id="createPlaylistButton">+ New Playlist</button>
+  </div>
+
+  <div class="playlist-grid" id="playlistGrid"></div>
+</section>
+
+<section class="page" id="page-liked">
+  <div class="page-title">
+    <h1>Liked Songs ♥</h1>
+    <p>Your favorite music.</p>
+  </div>
+  <div class="song-grid" id="likedSongs"></div>
+</section>
+
+<section class="page" id="page-recent">
+  <div class="page-title">
+    <h1>Recently Played</h1>
+    <p>Your listening history.</p>
+  </div>
+  <div class="song-grid" id="recentSongs"></div>
+</section>
+
+</main>
+</div>
+
+<footer class="player">
+
+  <div class="player-song">
+    <img id="playerCover" src="" alt="">
+    <div class="player-info">
+      <strong id="playerTitle">GAANX</strong>
+      <span id="playerArtist">Select a song</span>
+    </div>
+    <button id="playerLike" class="player-like">♡</button>
+  </div>
+
+  <div class="player-center">
+    <div class="player-controls">
+      <button id="shuffleButton">⤨</button>
+      <button id="previousButton">⏮</button>
+      <button id="playButton" class="play-button">▶</button>
+      <button id="nextButton">⏭</button>
+      <button id="repeatButton">↻</button>
     </div>
 
+    <div class="progress-container">
+      <span id="currentTime">0:00</span>
+      <input type="range" id="progressBar" min="0" max="100" value="0">
+      <span id="duration">0:00</span>
+    </div>
+  </div>
 
-    <div class="player-center">
+  <div class="player-volume">
+    🔊
+    <input type="range" id="volumeBar" min="0" max="1" value="1" step=".01">
+  </div>
 
-      <div class="player-controls">
+</footer>
 
-        <button id="shuffleButton" title="Shuffle">⤨</button>
+<!-- CREATE PLAYLIST -->
+<div class="modal" id="playlistModal">
+  <div class="modal-box">
+    <button class="close-modal" data-close="playlistModal">×</button>
+    <h2>Create Playlist</h2>
+    <p class="modal-subtitle">No account required.</p>
+    <input id="playlistNameInput" placeholder="Playlist name" maxlength="50">
+    <button class="primary-button full-button" id="savePlaylistButton">Create Playlist</button>
+  </div>
+</div>
 
-        <button id="previousButton">⏮</button>
+<!-- ADD TO PLAYLIST -->
+<div class="modal" id="addPlaylistModal">
+  <div class="modal-box">
+    <button class="close-modal" data-close="addPlaylistModal">×</button>
+    <h2>Add to Playlist</h2>
+    <p class="modal-subtitle" id="addPlaylistSongName"></p>
+    <div id="addPlaylistOptions"></div>
+  </div>
+</div>
 
-        <button id="playButton" class="play-button">▶</button>
+<!-- ADMIN LOGIN -->
+<div class="modal" id="adminLoginModal">
+  <div class="modal-box">
+    <button class="close-modal" data-close="adminLoginModal">×</button>
+    <h2>GAANX Admin</h2>
+    <p class="modal-subtitle">Sign in to manage music.</p>
 
-        <button id="nextButton">⏭</button>
+    <input type="email" id="adminEmail" placeholder="Admin email">
+    <input type="password" id="adminPassword" placeholder="Password">
 
-        <button id="repeatButton" title="Repeat">↻</button>
+    <button class="primary-button full-button" id="adminLoginButton">
+      Sign In
+    </button>
 
+    <p class="error-text" id="loginError"></p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-overlay" id="adminPanel">
+  <div class="admin-panel">
+
+    <header class="admin-header">
+      <div>
+        <p class="eyebrow">GAANX CONTROL CENTER</p>
+        <h2>Admin Panel</h2>
       </div>
 
-      <div class="progress-container">
+      <button id="adminLogoutButton" class="secondary-button">Logout</button>
+      <button id="closeAdminButton" class="icon-button">×</button>
+    </header>
 
-        <span id="currentTime">0:00</span>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-admin-tab="upload">Upload Song</button>
+      <button class="admin-tab" data-admin-tab="songs">Manage Songs</button>
+      <button class="admin-tab" data-admin-tab="playlists">Playlists</button>
+    </div>
 
-        <input
-          type="range"
-          id="progressBar"
-          min="0"
-          max="100"
-          value="0"
-        >
+    <!-- UPLOAD -->
+    <div class="admin-page active" id="admin-upload">
+      <div class="admin-card">
 
-        <span id="duration">0:00</span>
+        <h3>Add New Song</h3>
+        <p class="admin-description">Upload MP3 and cover image.</p>
 
+        <label>Song title</label>
+        <input id="songTitleInput" placeholder="Song title">
+
+        <label>Artist</label>
+        <input id="songArtistInput" placeholder="Artist name">
+
+        <label>Album</label>
+        <input id="songAlbumInput" placeholder="Album name">
+
+        <label>Playlist</label>
+        <select id="songPlaylistInput">
+          <option value="">No playlist</option>
+        </select>
+
+        <label>Audio MP3</label>
+        <input type="file" id="audioFileInput" accept="audio/*">
+
+        <label>Cover image</label>
+        <input type="file" id="coverFileInput" accept="image/*">
+
+        <div class="upload-progress">
+          <div id="uploadProgressBar"></div>
+        </div>
+
+        <button class="primary-button full-button" id="uploadSongButton">
+          🚀 Publish Song
+        </button>
+
+        <p id="uploadStatus" class="upload-status"></p>
       </div>
-
     </div>
 
-
-    <div class="player-volume">
-
-      <span>🔊</span>
-
-      <input
-        type="range"
-        id="volumeBar"
-        min="0"
-        max="1"
-        value="1"
-        step="0.01"
-      >
-
+    <!-- SONGS -->
+    <div class="admin-page" id="admin-songs">
+      <div class="admin-card">
+        <h3>Manage Songs</h3>
+        <div id="adminSongList"></div>
+      </div>
     </div>
 
-  </footer>
+    <!-- PLAYLISTS -->
+    <div class="admin-page" id="admin-playlists">
+      <div class="admin-card">
+        <h3>Official Playlists</h3>
 
+        <input id="adminPlaylistName" placeholder="New playlist name">
 
-  <!-- ================= PLAYLIST MODAL ================= -->
+        <button class="primary-button full-button" id="adminCreatePlaylist">
+          + Create Official Playlist
+        </button>
 
-  <div class="modal" id="playlistModal">
+        <br><br>
 
-    <div class="modal-box">
-
-      <button class="close-modal" data-close="playlistModal">
-        ×
-      </button>
-
-      <h2>Create Playlist</h2>
-
-      <input
-        id="playlistNameInput"
-        placeholder="Playlist name"
-        maxlength="50"
-      >
-
-      <button class="primary-button full-button" id="savePlaylistButton">
-        Create Playlist
-      </button>
-
+        <div id="adminPlaylistList"></div>
+      </div>
     </div>
 
   </div>
+</div>
 
+<div class="toast" id="toast"></div>
 
-  <!-- ================= ADMIN LOGIN ================= -->
-
-  <div class="modal" id="adminLoginModal">
-
-    <div class="modal-box">
-
-      <button class="close-modal" data-close="adminLoginModal">
-        ×
-      </button>
-
-      <h2>GAANX Admin</h2>
-
-      <p class="modal-subtitle">
-        Sign in to manage music.
-      </p>
-
-      <input
-        type="email"
-        id="adminEmail"
-        placeholder="Admin email"
-      >
-
-      <input
-        type="password"
-        id="adminPassword"
-        placeholder="Password"
-      >
-
-      <button class="primary-button full-button" id="adminLoginButton">
-        Sign In
-      </button>
-
-      <p class="error-text" id="loginError"></p>
-
-    </div>
-
-  </div>
-
-
-  <!-- ================= ADMIN PANEL ================= -->
-
-  <div class="admin-overlay" id="adminPanel">
-
-    <div class="admin-panel">
-
-      <header class="admin-header">
-
-        <div>
-          <p class="eyebrow">GAANX CONTROL CENTER</p>
-          <h2>Admin Panel</h2>
-        </div>
-
-        <button id="adminLogoutButton" class="secondary-button">
-          Logout
-        </button>
-
-        <button id="closeAdminButton" class="icon-button">
-          ×
-        </button>
-
-      </header>
-
-
-      <div class="admin-tabs">
-
-        <button class="admin-tab active" data-admin-tab="upload">
-          Upload Song
-        </button>
-
-        <button class="admin-tab" data-admin-tab="songs">
-          Manage Songs
-        </button>
-
-        <button class="admin-tab" data-admin-tab="playlists">
-          Playlists
-        </button>
-
-      </div>
-
-
-      <!-- UPLOAD -->
-
-      <div class="admin-page active" id="admin-upload">
-
-        <div class="admin-card">
-
-          <h3>Add New Song</h3>
-
-          <p class="admin-description">
-            Upload an audio file and cover image.
-          </p>
-
-          <label>Song title</label>
-
-          <input id="songTitleInput" placeholder="Song title">
-
-          <label>Artist</label>
-
-          <input id="songArtistInput" placeholder="Artist name">
-
-          <label>Album</label>
-
-          <input id="songAlbumInput" placeholder="Album name">
-
-          <label>Playlist</label>
-
-          <select id="songPlaylistInput">
-            <option value="">No playlist</option>
-          </select>
-
-          <label>Audio file</label>
-
-          <input
-            type="file"
-            id="audioFileInput"
-            accept="audio/*"
-          >
-
-          <label>Cover image</label>
-
-          <input
-            type="file"
-            id="coverFileInput"
-            accept="image/*"
-          >
-
-          <div class="upload-progress">
-
-            <div id="uploadProgressBar"></div>
-
-          </div>
-
-          <button class="primary-button full-button" id="uploadSongButton">
-            🚀 Publish Song
-          </button>
-
-          <p id="uploadStatus" class="upload-status"></p>
-
-        </div>
-
-      </div>
-
-
-      <!-- SONG MANAGEMENT -->
-
-      <div class="admin-page" id="admin-songs">
-
-        <div class="admin-card">
-
-          <h3>Manage Songs</h3>
-
-          <div id="adminSongList"></div>
-
-        </div>
-
-      </div>
-
-
-      <!-- PLAYLIST MANAGEMENT -->
-
-      <div class="admin-page" id="admin-playlists">
-
-        <div class="admin-card">
-
-          <h3>Manage Playlists</h3>
-
-          <div id="adminPlaylistList"></div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <!-- ================= TOAST ================= -->
-
-  <div class="toast" id="toast"></div>
-
-
-  <!-- Firebase -->
-
-  <script type="module" src="script.js"></script>
-
+<script type="module" src="script.js"></script>
 </body>
 </html>
