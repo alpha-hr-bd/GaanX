@@ -15,7 +15,7 @@ service cloud.firestore {
     function isAdmin() {
 
       return request.auth != null
-        && request.auth.uid == "YOUR_ADMIN_UID";
+        && request.auth.uid == "RfTwIpdMBsaEfMRRBLtkEscYqte2";
 
     }
 
